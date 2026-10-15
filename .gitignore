@@ -8,6 +8,7 @@ venv/
 # Jupyter
 .ipynb_checkpoints/
 
-# OS / editors
+# Local agent state / OS / editors
+.pi/
 .DS_Store
 *.swp
