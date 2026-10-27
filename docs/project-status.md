@@ -24,11 +24,11 @@ reference and as the unedited predecessor of the published `disk` repo.
 - `disk.old.py` — the earlier, coherent revision: same I/O, plus an explicit
   finite-difference diffusion solver (`Sim`), sklearn surrogate stacking
   (`Add`, `GPR`) and a `while Y[I-1].std() > …` control loop.
-- `Untitled.ipynb` — the interleaved correct version of `F()`
+- `control-loop.ipynb` — the interleaved correct version of `F()`
   (`ptm.write_registers(4085, x[7:]*400)`), plus `Jac` and a hand-rolled
   Gauss–Newton / line-search loop.
-- `Untitled1.ipynb` — hardware-free data inspection: memmap load, least-squares
-  sensitivity `w`, `matplotlib` heatmaps of `log|w|`.
+- `data-inspection.ipynb` — hardware-free data inspection: memmap load,
+  least-squares sensitivity `w`, `matplotlib` heatmaps of `log|w|`.
 - `real*.47f,34f` — read/write numpy memmaps, `dtype('47f,34f')` =
   `[('f0','<f4',(47,)),('f1','<f4',(34,))]`, 324 B/row; row counts 1081 / 303 /
   93 / 510. The filename *is* the dtype string.
@@ -43,6 +43,6 @@ socket, the pre-allocated memmaps, and the experiment metadata (row ordering,
 units, which file is which run) are all absent. The archived `disk.py` has an
 undriven second actuator bank (`ptm` receives `x[:7]` instead of `x[7:]`) and an
 unreachable optimiser tail, so its published form must not be read as a working
-controller. No license was attached anywhere in the original tree — treat this
-as all-rights-reserved. `disk.py` was exercised once, manually, by its author;
-there are no tests.
+controller. The original private tree had no license; this public archive is
+released under AGPL-3.0-only (see `LICENSE`). `disk.py` was exercised once,
+manually, by its author; there are no tests.
