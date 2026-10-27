@@ -8,19 +8,19 @@ English | [简体中文](README.zh-CN.md)
 
 <p align="center"><strong>47 actuators in, 34 IR sensors out: a field record of thermal calibration on a heated wafer.</strong></p>
 
-<p align="center"><em>1,987 real plant transitions, the Jacobian search that used them, and an honest account of what never worked.</em></p>
+<p align="center"><em>1,929 recorded plant transitions, the Jacobian search that used them, and an honest account of what never worked.</em></p>
 
 > **Status: archive.** This is the public record of a private bench experiment from June 2025. The acquisition path ran against real hardware; the control path is unfinished. Nothing here can be re-run without the bench, and nothing here is a maintained package.
 
 At a glance:
 
 - **47 → 34 MIMO bench** — 47 Modbus set-points (7 on one PLC, 40 on another) drive a heated plate; a 34-channel IR socket reads the field.
-- **1,987 captured rows** in four numpy memmaps: real inputs, real measurements, no simulation.
+- **1,929 recorded rows** — 1,987 slots reserved — in four numpy memmaps: real inputs, real measurements, no simulation.
 - **Two notebooks and two script revisions** — the working acquisition code, an earlier surrogate-model controller, and the later model-free search that was never completed.
 
 ## Quick start
 
-The only hardware-free path is the data-inspection notebook. It reads one of the committed capture files and plots least-squares sensitivities.
+The only hardware-free path is the data-inspection notebook. It reads one of the committed capture files and plots least-squares sensitivities. One edit is required first: the opening cell asks for `shape=9999`, i.e. 3.24 MB, but `real4.47f,34f` is 165,240 bytes = 510 rows, so numpy refuses the map. Change that cell to `shape=510`, or drop `shape=` to map exactly what the file holds, then run the notebook end to end:
 
 ```bash
 python3 -m venv .venv && . .venv/bin/activate
@@ -38,7 +38,7 @@ export PTM_HOST=localhost    PTM_PORT=502
 export SENSOR_HOST=localhost SENSOR_PORT=9090
 export DISK_DATA=real4.47f,34f
 
-python disk.py   # stops at the bare `raise` described below
+python disk.py   # dies at the memmap shape, then at the bare `raise`
 ```
 
 No endpoint ever defaults to the original private bench; all addresses come from the environment.
@@ -48,14 +48,15 @@ No endpoint ever defaults to the original private bench; all addresses come from
 **Working, exercised against hardware**
 
 - Open two Modbus TCP connections and one raw TCP sensor socket.
-- Write a 47-value set-point vector with per-bank scaling (`heat` ×100, `ptm` ×400).
+- Write set-points to both PLC banks with per-bank scaling (`heat` ×100, `ptm` ×400) — in this revision the same seven values go to both banks.
 - Request `b'GetData'`, parse the ASCII CSV reply, wait for the last 10 samples to settle, and average them.
 - Subtract the fixed `120.1` baseline and append a `(47 inputs, 34 outputs)` row to the memmap.
 - Inspect the captures offline: load the dtype, fit a linear sensitivity matrix, and visualise it as heatmaps.
 
 **Broken or incomplete, as committed**
 
-- `disk.py` halts at an unconditional `raise` before its optimisation loop. The code below it is unreachable.
+- `disk.py` cannot start: `np.memmap(DATA_PATH, '47f,34f', shape=9999)` (line 98) asks for 3.24 MB while the committed captures are 30–350 kB, so numpy raises `mmap length is greater than file size` before any hardware call.
+- After the same edit that the notebook needs, `disk.py` halts at an unconditional `raise` (line 107) before its optimisation loop. The code below it is unreachable.
 - The unreachable tail calls `JFit`, a name defined nowhere in the repository — a `NameError` even if the `raise` is removed.
 - `disk.py` writes `x[:7]` to the second PLC instead of `x[7:]`, so 40 of the 47 channels are never driven. `control-loop.ipynb` contains the correct split; this is a regression in the later script.
 - `disk.old.py` has a coherent control loop, but its imports and surrogate models only ran with the bench attached.
@@ -95,16 +96,17 @@ No endpoint ever defaults to the original private bench; all addresses come from
 
 ## The capture files
 
-Each row stores one acquisition: `f0` is the 47-element set-point vector, `f1` is the 34 sensor means after baseline subtraction. The dtype is `[('f0', '<f4', (47,)), ('f1', '<f4', (34,))]`, 324 bytes per row. `shape=9999` in the code is only a generous upper bound.
+Each row stores one acquisition: `f0` is the 47-element set-point vector, `f1` is the 34 sensor means after baseline subtraction. The dtype is `[('f0', '<f4', (47,)), ('f1', '<f4', (34,))]`, 324 bytes per row, and the row count is simply file size ÷ 324. The `shape=9999` in the code is a leftover reservation, not a fact about the files: it is larger than every one of them, so it aborts numpy instead of mapping anything.
 
-| File | Bytes | Rows |
-| --- | ---: | ---: |
-| `real.47f,34f` | 350,244 | 1,081 |
-| `real2.47f,34f` | 98,172 | 303 |
-| `real3.47f,34f` | 30,132 | 93 |
-| `real4.47f,34f` | 165,240 | 510 |
+| File | Bytes | Rows reserved | Rows with data |
+| --- | ---: | ---: | ---: |
+| `real.47f,34f` | 350,244 | 1,081 | 1,080 |
+| `real2.47f,34f` | 98,172 | 303 | 292 |
+| `real3.47f,34f` | 30,132 | 93 | 48 |
+| `real4.47f,34f` | 165,240 | 510 | 509 |
+| **Total** | 643,788 | 1,987 | 1,929 |
 
-The files are pre-allocated and partially written; later rows may still be zeros. Units, row ordering, and run identities were never recorded.
+A reserved row counts as data when its `f1` is not all zeros. The gaps are honest ones: `real2` has zero holes at rows 287, 289 and 290, `real3` stops at row 48 of 93, and `real3` holds 70 written set-point vectors against only 48 stored measurements — 22 commands went out whose readings never landed. Units, row ordering, and run identities were never recorded.
 
 ## Repository layout
 
@@ -123,6 +125,7 @@ The files are pre-allocated and partially written; later rows may still be zeros
 ├── real4.47f,34f
 ├── assets/
 │   └── logo.svg
+├── CONTRIBUTING.md
 └── docs/
     └── project-status.md
 ```
@@ -138,24 +141,21 @@ There is no build, package, test suite, or CI. The repository is a fixed archive
 
 ## How to contribute
 
-Corrections with evidence are welcome — especially experiment metadata, the meaning of each capture file, or the sensor's physical unit.
-
-- Open an issue with the file, line, or byte offset that supports the correction.
-- Keep pull requests narrow: documentation, sanitisation, or a clearly labelled experimental branch.
-- Do not present the archived controller as a working system.
+Corrections with evidence are welcome — especially experiment metadata, the meaning of each capture file, or the sensor's physical unit. [CONTRIBUTING.md](CONTRIBUTING.md) holds the rules: what is in scope, what evidence an issue needs, and what a pull request may touch.
 
 ## Roadmap
 
 **Implemented**
 
 - [x] Hardware acquisition: Modbus writes, `GetData` reads, settle-and-average, memmap append.
-- [x] Four real capture files, 1,987 rows total.
+- [x] Four real capture files: 1,987 rows reserved, 1,929 with data.
 - [x] Offline sensitivity analysis and heatmap inspection.
 - [x] Environment-variable sanitisation of every private bench address.
 - [x] AGPL-3.0-only licensing and a documented evidence record.
 
 **Planned**
 
+- [ ] Fix the `shape=9999` reservation in both notebooks and `disk.py` so the captures can be mapped as they are.
 - [ ] Recover experiment metadata: row order, units, and which file is which run.
 - [ ] Repair the `disk.py` tail and replace the undefined `JFit` call.
 - [ ] Reconcile the `x[:7]` / `x[7:]` actuator-bank regression.
@@ -173,4 +173,4 @@ This repository is the earlier, raw predecessor of the author's published `disk`
 
 ## License
 
-[AGPL-3.0-only](LICENSE). The original private tree had no license; this public archive is released under the GNU Affero General Public License v3.0.
+[AGPL-3.0-only](LICENSE), Copyright (C) 2025 ZisIsNotZis. The original private tree had no license; this public archive is released under the GNU Affero General Public License v3.0.

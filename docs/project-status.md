@@ -10,10 +10,11 @@ entrypoint wrapper.
 ## Status
 
 Archive — abandoned in July 2025, never finished. The acquisition path was run
-against real hardware, and four capture files (`real*.47f,34f`, 1987 rows total)
-survive. The control path does not work as committed: `disk.py` raises at
-line 107 and then calls `JFit`, a name defined nowhere in the repo. Kept for
-reference and as the unedited predecessor of the published `disk` repo.
+against real hardware, and four capture files (`real*.47f,34f`, 1987 rows
+reserved, 1929 holding data) survive. The control path does not work as
+committed: `disk.py` raises at line 107 and then calls `JFit`, a name defined
+nowhere in the repo. Kept for reference and as the unedited predecessor of the
+published `disk` repo.
 
 ## Evidence
 
@@ -31,7 +32,19 @@ reference and as the unedited predecessor of the published `disk` repo.
   least-squares sensitivity `w`, `matplotlib` heatmaps of `log|w|`.
 - `real*.47f,34f` — read/write numpy memmaps, `dtype('47f,34f')` =
   `[('f0','<f4',(47,)),('f1','<f4',(34,))]`, 324 B/row; row counts 1081 / 303 /
-  93 / 510. The filename *is* the dtype string.
+  93 / 510 (file size ÷ 324). The filename *is* the dtype string.
+- Row occupancy, measured on the committed bytes (a row counts when its `f1` is
+  not all zero): 1080 / 292 / 48 / 509 of 1081 / 303 / 93 / 510 — 1929 of 1987
+  reserved rows. `real2` has zero holes at rows 287, 289, 290; `real3` stops at
+  row 48 while holding 70 written set-point vectors, i.e. 22 commands were sent
+  whose readings never landed.
+- `shape=9999` is dead in all three code paths. `np.memmap(path, '47f,34f',
+  shape=9999)` asks for 3.24 MB; the committed files are 30,132–350,244 B, so
+  numpy raises `ValueError: mmap length is greater than file size` before the
+  first hardware call — `disk.py` line 98, `data-inspection.ipynb` cell 1, and
+  `control-loop.ipynb` cell 1. The hardware-free path therefore needs that
+  number replaced with the real row count (or the `shape=` argument dropped)
+  before it runs at all.
 - Lineage: `disk.old.py` diffs against the published `disk`
   (`github.com/ZisIsNotZis/disk`) `disk.py` in only four places (settle test,
   `sleep(4)`, a commented sim line, and `real2.47f,34f` vs `in.ixy`).
