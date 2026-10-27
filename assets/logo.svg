@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-labelledby="logo-title logo-desc">
+  <title id="logo-title">xywdisk</title>
+  <desc id="logo-desc">A sensor grid over a heated wafer, with a hot spot at its centre.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#111827"/>
+      <stop offset="1" stop-color="#1f2937"/>
+    </linearGradient>
+    <radialGradient id="heat" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#fb923c" stop-opacity=".95"/>
+      <stop offset=".45" stop-color="#f97316" stop-opacity=".45"/>
+      <stop offset="1" stop-color="#f97316" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="wafer">
+      <circle cx="64" cy="64" r="40"/>
+    </clipPath>
+  </defs>
+  <rect width="128" height="128" rx="26" fill="url(#bg)"/>
+  <circle cx="64" cy="64" r="40" fill="#f8fafc"/>
+  <g clip-path="url(#wafer)" stroke="#cbd5e1" stroke-width="1">
+    <path d="M24 44h80M24 64h80M24 84h80M44 24v80M64 24v80M84 24v80"/>
+  </g>
+  <circle cx="64" cy="64" r="40" fill="url(#heat)"/>
+  <circle cx="64" cy="64" r="40" fill="none" stroke="#e2e8f0" stroke-width="2"/>
+  <circle cx="64" cy="64" r="27" fill="none" stroke="#fdba74" stroke-width="1.2" opacity=".85"/>
+  <circle cx="64" cy="64" r="14" fill="none" stroke="#fb923c" stroke-width="1.4" opacity=".9"/>
+  <circle cx="64" cy="64" r="5" fill="#ea580c"/>
+  <circle cx="64" cy="64" r="2.5" fill="#fff7ed"/>
+</svg>
